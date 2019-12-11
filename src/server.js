@@ -37,7 +37,7 @@ passport.deserializeUser(function (user, cb) {
 
 
 passport.use(new (require('passport-cas').Strategy)({
-  ssoBaseURL: 'https://cl-accounts.cloud.visenti.com/cas/',
+  ssoBaseURL: 'https://staging-accounts.cloud.visenti.com/cas',
   serverBaseURL: 'http://localhost:3000'
 }, function (login, done) {
 		console.log(login);
@@ -53,8 +53,9 @@ app.get('/cas_login', function(req, res, next) {
 		console.log(user);
 		console.log(info);
     if (!user) {
-      req.session.messages = info.message;
-      return res.redirect('/');
+			req.session.messages = info.message;
+			alert("failed to login")
+      return res.redirect('/cas_login');
     }
 
     req.logIn(user, function (err) {
@@ -79,13 +80,37 @@ app.get('/cas_logout', function (req, res, next) {
 		req.session.destroy()
 		console.log("Log out, destroying session on logout");
 		// remove session from CAS server as well
-		res.redirect("https://cl-accounts.cloud.visenti.com/cas/logout")
+		// res.redirect("https://staging-accounts.cloud.visenti.com/")
 	} catch (error) {
 		console.log({ err: error });
 		console.log("Error destroying session on logout");
 	}
 	
 });
+
+app.get("*", function (req, res, next) {
+	passport.authenticate('cas', function (err, user, info) {
+		if (err) {
+      return next(err);
+    }
+		console.log(user);
+		console.log(info);
+    if (!user) {
+			req.session.messages = info.message;
+			alert("failed to login");
+    }
+
+    req.logIn(user, function (err) {
+      if (err) {
+        return next(err);
+      }
+
+      req.session.messages = '';
+			next();
+    });
+	})(req, res, next);
+});
+
 
 app.use(
 		compression({ threshold: 0 }),
